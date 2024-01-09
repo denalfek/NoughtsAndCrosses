@@ -5,7 +5,7 @@ namespace NoughtsAndCrosses.Infrastructure.Data.Entities;
 
 public class Game
 {
-    public Game(Player[] players)
+    public Game(User[] players)
     {
         Id = new ObjectId();
         StaTime = DateTime.UtcNow;
@@ -35,5 +35,5 @@ public class Game
     
     public DateTime? FinishTime { get; set; }
     
-    public Player[] Players { get; set; }
+    public User[] Players { get; set; }
 }

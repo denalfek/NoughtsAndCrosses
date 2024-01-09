@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NoughtsAndCrosses.API;
 using NoughtsAndCrosses.API.Configs;
 using NoughtsAndCrosses.Infrastructure.Data.Entities;
 
@@ -21,25 +24,36 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPost(
-    "game",
-    async (PlayerSide side, HttpContext context, IMongoClient mongoClient) =>
+    "/api/game/initialization",
+    async (PlayerSide side, HttpContext context, IMongoClient mongoClient, ILogger logger) =>
     {
-        if (context.Request.Cookies["user_id"] is { } rawUserId
-            && ObjectId.TryParse(rawUserId, out var userId))
+        var user = (User)context.User;
+        switch (side)
         {
-            
+            case PlayerSide.Cross:
+            {
+                logger.LogInformation("Test");
+                var db = mongoClient
+                    .GetDatabase(MongoConfig.DatabaseName);
+                var game = new Game(new []{ user });
+                var gameCollection = db.GetCollection<Game>(nameof(Game));
+                await gameCollection.InsertOneAsync(game);
+                return;
+            }
+            case PlayerSide.Nought:
+            {
+                logger.LogInformation("Test bot first");
+                return;
+            }
+            default:
+                logger.LogError(
+                    "Unsupported player side: {Side}",
+                    side);
+                throw new ArgumentOutOfRangeException(
+                    nameof(PlayerSide),
+                    "Unsupported player side");
         }
-        
-
-        var db = mongoClient
-            .GetDatabase(MongoConfig.DatabaseName);
-        var playerCollection = db.GetCollection<Player>(nameof(Player));
-        var player = new Player();
-        await playerCollection.InsertOneAsync(player);
-        
-        var game = new Game(new []{ player });
-        var gameCollection = db.GetCollection<Game>(nameof(Game));
-        await gameCollection.InsertOneAsync(game);
     });
 
+app.UseMiddleware<InitializeUserMiddleware>();
 app.Run();
