@@ -6,7 +6,9 @@ namespace NoughtsAndCrosses.Infrastructure.Data.Entities;
 public class Player
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public ObjectId Id { get; set; } = new();
 
+    [BsonRepresentation(BsonType.String)]
     public PlayerSide Side { get; set; }
 }
