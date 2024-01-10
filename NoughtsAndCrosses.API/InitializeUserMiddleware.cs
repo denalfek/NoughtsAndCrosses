@@ -1,7 +1,7 @@
 using System.Net;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NoughtsAndCrosses.API.Configs;
+using NoughtsAndCrosses.Infrastructure.Data.Configs;
 using NoughtsAndCrosses.Infrastructure.Data.Entities;
 
 namespace NoughtsAndCrosses.API;

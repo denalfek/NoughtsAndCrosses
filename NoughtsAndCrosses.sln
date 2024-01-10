@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoughtsAndCrosses.API", "No
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoughtsAndCrosses.Infrastructure.Data", "NoughtsAndCrosses.Infrastructure.Data\NoughtsAndCrosses.Infrastructure.Data.csproj", "{95EFEBFE-7D2D-4C38-B5DD-F8895343B1F6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoughtsAndCrosses.Application", "NoughtsAndCrosses.Application\NoughtsAndCrosses.Application.csproj", "{E672AA17-4AD2-4E6B-8512-4135308106E1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{95EFEBFE-7D2D-4C38-B5DD-F8895343B1F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95EFEBFE-7D2D-4C38-B5DD-F8895343B1F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95EFEBFE-7D2D-4C38-B5DD-F8895343B1F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E672AA17-4AD2-4E6B-8512-4135308106E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E672AA17-4AD2-4E6B-8512-4135308106E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E672AA17-4AD2-4E6B-8512-4135308106E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E672AA17-4AD2-4E6B-8512-4135308106E1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

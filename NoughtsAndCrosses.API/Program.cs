@@ -1,13 +1,19 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NoughtsAndCrosses.API;
-using NoughtsAndCrosses.API.Configs;
+using NoughtsAndCrosses.Application.Services;
+using NoughtsAndCrosses.Application.Services.Interfaces;
+using NoughtsAndCrosses.Infrastructure.Data.Configs;
 using NoughtsAndCrosses.Infrastructure.Data.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddSingleton<IMongoClient>(
         new MongoClient(builder.Configuration.GetConnectionString(MongoConfig.ConnectionStringName)));
+builder.Services.AddTransient<IBot, Bot>();
+builder.Services.AddScoped<IGameService, GameService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -60,7 +66,12 @@ app.MapPost(
     });
 app.MapGet(
     "/api/game",
-    async (string gameId, HttpContext ctx, IMongoClient client, ILoggerFactory loggerFactory, CancellationToken ct) =>
+    async (
+        [Required][FromQuery]string gameId,
+        HttpContext ctx,
+        IMongoClient client,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct) =>
     {
         if (!ObjectId.TryParse(gameId, out var id))
         {
@@ -90,6 +101,29 @@ app.MapGet(
         return Results.BadRequest("Game not found");
 
     });
+app.MapPatch(
+    "/api/game",
+    async (
+        [Required][FromBody]HitRequest request,
+        HttpContext ctx,
+        [FromServices]IGameService gameService,
+        CancellationToken ct) =>
+    {
+        if (!ObjectId.TryParse(request.GameId, out var gameId))
+        {
+            return Results.BadRequest("Invalid game id");
+        }
+        
+        var user = (User)ctx.User;
+        var result = await gameService.ProcessAsync(
+            gameId,
+            user,
+            request.CellId,
+            ct);
 
+        return result.IsT0
+            ? Results.Ok(new GameResponse(result.AsT0.Id.ToString(), result.AsT0.Field))
+            : Results.BadRequest(result.AsT1.Value);
+    });
 app.UseMiddleware<InitializeUserMiddleware>();
 app.Run();
