@@ -135,7 +135,7 @@ public class GameService : IGameService
 
     private async Task HitAsync(Game game, PlayerSide side, CancellationToken ct = default)
     {
-        await Task.Delay(1000, ct);
+        await Task.Delay(1000, ct); // test
     }
 
     private async Task<OneOf<Game, Error<string>>> SanitizeAsync(
