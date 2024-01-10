@@ -3,13 +3,12 @@ namespace NoughtsAndCrosses.Infrastructure.Data.Configs;
 public class MongoConfigurationOptions
 {
     public MongoConfigurationOptions(
-        
         string host,
-        int? port,
         string user,
         string password,
-        string database
-    ) {
+        string database,
+        int? port = null)
+    {
         Host = host;
         Port = port;
         User = user;
