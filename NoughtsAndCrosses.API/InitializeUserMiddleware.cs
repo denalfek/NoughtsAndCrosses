@@ -13,8 +13,9 @@ public class InitializeUserMiddleware
     private readonly IMongoCollection<User> _collection;
     private readonly CancellationToken _ct = new();
 
-    private const string AnonymousPath = "/api/game/initialization";
+    private const string AnonymousPath = "/api/game";
     private const string AnonymousMethod = "POST";
+    private const string UserIdCookieName = "userId";
 
     public InitializeUserMiddleware(
         RequestDelegate next,
@@ -28,8 +29,12 @@ public class InitializeUserMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var rawUserId = context.Request.Headers["UserId"].FirstOrDefault();
-        var correctId = ObjectId.TryParse(rawUserId, out var userId);
+        var correctId = ObjectId.TryParse(
+            context.Request
+                .Cookies
+                .FirstOrDefault(c => c.Key == UserIdCookieName)
+                .Value,
+            out var userId);
         if (context.Request.Path == AnonymousPath && context.Request.Method == AnonymousMethod)
         {
             User user;
@@ -42,7 +47,13 @@ public class InitializeUserMiddleware
             {
                 user = new User();
                 await _collection.InsertOneAsync(user, cancellationToken: _ct);
-                context.Response.Cookies.Append("UserId", user.Id.ToString());
+                context.Response.Cookies.Append(
+                    UserIdCookieName,
+                    user.Id.ToString(),
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                    });
             }
 
             context.User = user;
@@ -56,7 +67,6 @@ public class InitializeUserMiddleware
             }
             else
             {
-                         
                 _logger.LogError(
                     "Somebody trying to access method {Method} {Path} without userId in cookies",
                     context.Request.Method,
