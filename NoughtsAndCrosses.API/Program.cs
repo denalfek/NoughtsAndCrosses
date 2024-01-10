@@ -9,9 +9,33 @@ using NoughtsAndCrosses.Infrastructure.Data.Configs;
 using NoughtsAndCrosses.Infrastructure.Data.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables(prefix: "NOUGHTS_AND_CROSSES_API_");
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.Services.AddSingleton<MongoConfigurationOptions>(
+    provider =>
+    {
+        var configuration = provider.GetRequiredService<IConfiguration>();
+        var config = configuration.GetSection("MongoDb").Get<MongoConfigurationOptions>();
+
+        if (config is null)
+        {
+            Console.WriteLine("MongoDb configuration is null");
+            throw new Exception("MongoDb configuration is null");
+        }
+
+        var connectionString = builder.Environment.IsProduction()
+            ? config.ConnectionStringProd
+            : config.ConnectionStringDev;
+
+        Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+        Console.WriteLine($"MongoDb connection string: {connectionString}");
+        return config;
+    });
 builder.Services
     .AddSingleton<IMongoClient>(
-        new MongoClient(builder.Configuration.GetConnectionString(MongoConfig.ConnectionStringName)));
+        provider => new MongoClient(builder.Environment.IsDevelopment()
+            ? provider.GetRequiredService<MongoConfigurationOptions>().ConnectionStringDev
+            : provider.GetRequiredService<MongoConfigurationOptions>().ConnectionStringProd));
 builder.Services.AddTransient<IBot, Bot>();
 builder.Services.AddScoped<IGameService, GameService>();
 

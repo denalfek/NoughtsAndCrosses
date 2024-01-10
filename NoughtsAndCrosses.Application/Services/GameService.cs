@@ -16,12 +16,16 @@ public class GameService : IGameService
     private readonly IMongoCollection<Game> _gameCollection;
     private readonly IBot _bot;
     
-    public GameService(IMongoClient mongoClient, ILogger<GameService> logger, IBot bot)
+    public GameService(
+        IBot bot,
+        IMongoClient mongoClient,
+        MongoConfigurationOptions mongoConfigurationOptions,
+        ILogger<GameService> logger)
     {
-        _logger = logger;
         _bot = bot;
-        var db = mongoClient.GetDatabase(MongoConfig.DatabaseName);
+        var db = mongoClient.GetDatabase(mongoConfigurationOptions.Database);
         _gameCollection = db.GetCollection<Game>(nameof(Game));
+        _logger = logger;
     }
 
     public async Task<OneOf<Game, Error<string>>> InitializeAsync(

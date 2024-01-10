@@ -14,11 +14,11 @@ services:
         - NOUGHTS_AND_CROSSES_API_Logging:LogLevel:Microsoft.AspNetCore=Warning
         - NOUGHTS_AND_CROSSES_API_MongoDb:User=crossAndNoughtsRoot
         - NOUGHTS_AND_CROSSES_API_MongoDb:Password=supersecret12)auth!
-        - NOUGHTS_AND_CROSSES_API_MongoDb:Database=noughts-and-crosses
+        - NOUGHTS_AND_CROSSES_API_MongoDb:Database=NoughtsAndCrosses
         - NOUGHTS_AND_CROSSES_API_MongoDb:Host=noughts-and-crosses-mongo-db
         - NOUGHTS_AND_CROSSES_API_MongoDb:Port=27017
     networks:
-        - noughts-and-crosses-network
+        - crosses-and-noughts-network
     
   mongodb:
     container_name: noughts-and-crosses-mongo-db
@@ -28,7 +28,14 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: supersecret12)auth!
     ports:
       - "27017:27017"
+    volumes:
+        - crosses_and_noughts:/data/db
+    networks:
+        - crosses-and-noughts-network
 
 networks:
-  noughts-and-crosses-network:
-      name: noughts-and-crosses-network
+  crosses-and-noughts-network:
+      name: crosses-and-noughts-network
+      
+volumes:
+  crosses_and_noughts:

@@ -20,11 +20,13 @@ public class InitializeUserMiddleware
     public InitializeUserMiddleware(
         RequestDelegate next,
         ILogger<InitializeUserMiddleware> logger,
-        IMongoClient client)
+        IMongoClient client,
+        MongoConfigurationOptions mongoConfigurationOptions)
     {
         _next = next;
         _logger = logger;
-        _collection = client.GetDatabase(MongoConfig.DatabaseName).GetCollection<User>(nameof(User));
+        _collection = client.GetDatabase(mongoConfigurationOptions.Database)
+            .GetCollection<User>(nameof(User));
     }
 
     public async Task InvokeAsync(HttpContext context)
