@@ -45,9 +45,26 @@ public class GameService : IGameService
         return game;
     }
 
-    public Task<OneOf<Game, Error<string>>> ResumeAsync(ObjectId gameId, ObjectId userId, CancellationToken ct = default)
+    public async Task<OneOf<Game, Error<string>>> ResumeAsync(ObjectId gameId, ObjectId userId, CancellationToken ct = default)
     {
+        if (await _gameCollection
+                .Find(x => x.Id == gameId)
+                .FirstOrDefaultAsync(ct) is not { WinnerId: null } game)
+        {
+            return new Error<string>("Game not found or has finished already");
+        }
+
+        if (game.Gamers.Any(p => p.Id == userId))
+        {
+            return game;
+        }
         
+        _logger.LogInformation(
+            "User {UserId} trying to access game {GameId} he doesn't belong to",
+            userId,
+            gameId);
+            
+        return new Error<string>("Game not found");
     }
 
     public async Task<OneOf<Game, Error<string>>> ProcessAsync(
@@ -159,7 +176,6 @@ public class GameService : IGameService
 
         return game;
     }
-
     
     private static bool CheckWinner(Cell[] field, PlayerSide side)
     {

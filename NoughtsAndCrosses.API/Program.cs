@@ -31,13 +31,12 @@ app.MapPost(
     "/api/game",
     async (
         InitializeGameRequest request,
-        HttpContext context,
         [FromServices]IGameService gameService,
+        HttpContext ctx,
         CancellationToken ct) =>
     {
-        var user = (User)context.User;
         var result = await gameService.InitializeAsync(
-            user.Id,
+            ((User)ctx.User).Id,
             request.Side,
             ct);
 
@@ -49,45 +48,26 @@ app.MapGet(
     "/api/game",
     async (
         [Required][FromQuery]string gameId,
+        [FromServices]IGameService gameService,
         HttpContext ctx,
-        IMongoClient client,
-        ILoggerFactory loggerFactory,
         CancellationToken ct) =>
     {
         if (!ObjectId.TryParse(gameId, out var id))
         {
             return Results.BadRequest("Invalid game id");
         }
-        
-        var logger = loggerFactory.CreateLogger("GET:/api/game");
-        var gamer = (User)ctx.User;
-        var gameCollection = client.GetDatabase(MongoConfig.DatabaseName).GetCollection<Game>(nameof(Game));
 
-        if (await gameCollection
-                .Find(x => x.Id == id)
-                .FirstOrDefaultAsync(ct) is not { WinnerId: null } game)
-        {
-            return Results.BadRequest("Game not found");
-        }
-        
-        if (game.Gamers.Any(p => p.Id == gamer.Id))
-        {
-            return Results.Ok(new GameResponse(game.Id.ToString(), game.Field));
-        }
-            
-        logger.LogInformation(
-            "User {UserId} trying to access game {GameId}",
-            gamer.Id,
-            id);
-        return Results.BadRequest("Game not found");
-
+        var result = await gameService.ResumeAsync(id, ((User)ctx.User).Id, ct);
+        return result.IsT0
+            ? Results.Ok(new GameResponse(result.AsT0.Id.ToString(), result.AsT0.Field))
+            : Results.BadRequest(result.AsT1.Value);
     });
 app.MapPatch(
     "/api/game",
     async (
         [Required][FromBody]HitRequest request,
-        HttpContext ctx,
         [FromServices]IGameService gameService,
+        HttpContext ctx,
         CancellationToken ct) =>
     {
         if (!ObjectId.TryParse(request.GameId, out var gameId))
