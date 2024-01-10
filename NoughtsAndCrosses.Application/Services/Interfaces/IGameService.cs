@@ -5,13 +5,17 @@ using OneOf.Types;
 
 namespace NoughtsAndCrosses.Application.Services.Interfaces;
 
-using ProcessGameResponse = OneOf<Game, Error<string>>;
+using GameResponse = OneOf<Game, Error<string>>;
 
 public interface IGameService
 {
-    Task<ProcessGameResponse> ProcessAsync(
+    Task<GameResponse> InitializeAsync(ObjectId userId, PlayerSide side, CancellationToken ct = default);
+    
+    Task<GameResponse> ResumeAsync(ObjectId gameId, ObjectId userId, CancellationToken ct = default);
+    
+    Task<GameResponse> ProcessAsync(
         ObjectId gameId,
-        User user,
+        ObjectId userId,
         int cellId,
         CancellationToken ct = default);
 }

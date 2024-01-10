@@ -32,37 +32,18 @@ app.MapPost(
     async (
         InitializeGameRequest request,
         HttpContext context,
-        IMongoClient mongoClient,
-        ILoggerFactory loggerFactory,
+        [FromServices]IGameService gameService,
         CancellationToken ct) =>
     {
-        var logger = loggerFactory.CreateLogger("POST:/api/game");
         var user = (User)context.User;
-        switch (request.Side)
-        {
-            case PlayerSide.Cross:
-            {
-                logger.LogInformation("Test");
-                var db = mongoClient
-                    .GetDatabase(MongoConfig.DatabaseName);
-                var game = new Game(new []{ user });
-                var gameCollection = db.GetCollection<Game>(nameof(Game));
-                await gameCollection.InsertOneAsync(game, cancellationToken: ct);
-                return Results.Ok(new GameResponse(game.Id.ToString(), game.Field));
-            }
-            case PlayerSide.Nought:
-            {
-                logger.LogInformation("Test bot first");
-                return Results.Ok();
-            }
-            default:
-                logger.LogError(
-                    "Unsupported player side: {Side}",
-                    request.Side);
-                throw new ArgumentOutOfRangeException(
-                    nameof(PlayerSide),
-                    "Unsupported player side");
-        }
+        var result = await gameService.InitializeAsync(
+            user.Id,
+            request.Side,
+            ct);
+
+        return result.IsT0
+            ? Results.Ok(new GameResponse(result.AsT0.Id.ToString(), result.AsT0.Field))
+            : Results.BadRequest(result.AsT1.Value);
     });
 app.MapGet(
     "/api/game",
@@ -79,7 +60,7 @@ app.MapGet(
         }
         
         var logger = loggerFactory.CreateLogger("GET:/api/game");
-        var user = (User)ctx.User;
+        var gamer = (User)ctx.User;
         var gameCollection = client.GetDatabase(MongoConfig.DatabaseName).GetCollection<Game>(nameof(Game));
 
         if (await gameCollection
@@ -89,14 +70,14 @@ app.MapGet(
             return Results.BadRequest("Game not found");
         }
         
-        if (game.Players.Any(p => p.Id == user.Id))
+        if (game.Gamers.Any(p => p.Id == gamer.Id))
         {
             return Results.Ok(new GameResponse(game.Id.ToString(), game.Field));
         }
             
         logger.LogInformation(
             "User {UserId} trying to access game {GameId}",
-            user.Id,
+            gamer.Id,
             id);
         return Results.BadRequest("Game not found");
 
@@ -114,10 +95,10 @@ app.MapPatch(
             return Results.BadRequest("Invalid game id");
         }
         
-        var user = (User)ctx.User;
+        var gamer = (User)ctx.User;
         var result = await gameService.ProcessAsync(
             gameId,
-            user,
+            gamer.Id,
             request.CellId,
             ct);
 

@@ -5,11 +5,11 @@ namespace NoughtsAndCrosses.Infrastructure.Data.Entities;
 
 public class Game
 {
-    public Game(User[] players)
+    public Game(Gamer[] gamers)
     {
         Id = new ObjectId();
         StaTime = DateTime.UtcNow;
-        Players = players;
+        Gamers = gamers;
         Field = new Cell[9];
 
         for (var i = 0; i < 9; i++)
@@ -35,5 +35,5 @@ public class Game
     
     public DateTime? FinishTime { get; set; }
     
-    public User[] Players { get; set; }
+    public Gamer[] Gamers { get; set; }
 }

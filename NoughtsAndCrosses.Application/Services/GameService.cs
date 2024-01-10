@@ -14,7 +14,6 @@ public class GameService : IGameService
 {
     private readonly ILogger<GameService> _logger;
     private readonly IMongoCollection<Game> _gameCollection;
-    private readonly IMongoCollection<User> _userCollection;
     private readonly IBot _bot;
     
     public GameService(IMongoClient mongoClient, ILogger<GameService> logger, IBot bot)
@@ -23,48 +22,63 @@ public class GameService : IGameService
         _bot = bot;
         var db = mongoClient.GetDatabase(MongoConfig.DatabaseName);
         _gameCollection = db.GetCollection<Game>(nameof(Game));
-        _userCollection = db.GetCollection<User>(nameof(User));
     }
-    
+
+    public async Task<OneOf<Game, Error<string>>> InitializeAsync(
+        ObjectId userId,
+        PlayerSide side,
+        CancellationToken ct = default)
+    {
+        var game = new Game(new []{ new Gamer
+        {
+            Id = userId,
+            Side = side,
+        } });
+        
+        if (side == PlayerSide.Nought)
+        {
+            var botHit = await _bot.HitAsync(game.Field, PlayerSide.Cross);
+            game.Field[botHit.Id].Side = PlayerSide.Cross;
+        }
+
+        await _gameCollection.InsertOneAsync(game, cancellationToken: ct);
+        return game;
+    }
+
+    public Task<OneOf<Game, Error<string>>> ResumeAsync(ObjectId gameId, ObjectId userId, CancellationToken ct = default)
+    {
+        
+    }
+
     public async Task<OneOf<Game, Error<string>>> ProcessAsync(
         ObjectId gameId,
-        User user,
+        ObjectId userId,
         int cellId,
         CancellationToken ct = default)
     {
-        if (await _gameCollection
-                .Find(x => x.Id == gameId)
-                .FirstOrDefaultAsync(ct) is not { WinnerId: null } game)
+        // ReSharper disable once MergeIntoPattern
+        if (await Sanitize(gameId, userId, cellId, ct) is var result && result.IsT1)
         {
-            return new Error<string>("Game not found or has finished already");
+            return result;
         }
         
-        if (game.Players.All(p => p.Id != user.Id))
-        {
-            _logger.LogInformation(
-                "User {UserId} trying to access game {GameId}",
-                user.Id,
-                gameId);
-            return new Error<string>("Game not found");
-        }
-        
-        if (game.Field.Length <= cellId)
-        {
-            return new Error<string>("Invalid cell id");
-        }
-        
-        if (game.Field.All(c => c.Side is not null))
-        {
-            return new Error<string>("Game finished");
-        }
-        
+        var game = result.AsT0;
         var cell = game.Field[cellId];
-        
         if (cell.Side is not null)
         {
             return new Error<string>("Cell is hit");
         }
+        
+        if (game.Gamers.FirstOrDefault(x => x.Id == userId) is not { } user)
+        {
+            _logger.LogInformation(
+                "User {UserId} trying to access game {GameId}",
+                userId,
+                gameId);
 
+            return new Error<string>("Something went wrong");
+        }
+        
         var botSide = user.Side == PlayerSide.Cross ? PlayerSide.Nought : PlayerSide.Cross;
         game.Field[cellId].Side = user.Side;
         await _gameCollection.UpdateOneAsync(
@@ -94,7 +108,6 @@ public class GameService : IGameService
             return game;
         }
         
-        game.WinnerId = ObjectId.Empty;
         game.FinishTime = DateTime.UtcNow;
         await _gameCollection.UpdateOneAsync(
             x => x.Id == gameId,
@@ -103,6 +116,51 @@ public class GameService : IGameService
         return game;
     }
 
+    private async Task<OneOf<Game, Error<string>>> Sanitize(
+        ObjectId gameId,
+        ObjectId userId,
+        int cellId,
+        CancellationToken ct = default)
+    {
+        if (await _gameCollection
+                .Find(x => x.Id == gameId)
+                .FirstOrDefaultAsync(ct) is not { WinnerId: null } game)
+        {
+            return new Error<string>("Game not found or has finished already");
+        }
+        
+        if (game.Gamers.FirstOrDefault(x => x.Id == userId) is not { } user)
+        {
+            _logger.LogInformation(
+                "User {UserId} trying to access game {GameId}",
+                userId,
+                gameId);
+            return new Error<string>("Something went wrong");
+        }
+        
+        if (game.Gamers.All(p => p.Id != user.Id))
+        {
+            _logger.LogInformation(
+                "User {UserId} trying to access game {GameId}",
+                user.Id,
+                gameId);
+            return new Error<string>("Game not found");
+        }
+        
+        if (game.Field.Length <= cellId)
+        {
+            return new Error<string>("Invalid cell id");
+        }
+        
+        if (game.Field.All(c => c.Side is not null))
+        {
+            return new Error<string>("Game finished");
+        }
+
+        return game;
+    }
+
+    
     private static bool CheckWinner(Cell[] field, PlayerSide side)
     {
       // Check rows
