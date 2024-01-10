@@ -74,7 +74,7 @@ public class GameService : IGameService
         CancellationToken ct = default)
     {
         // ReSharper disable once MergeIntoPattern
-        if (await Sanitize(gameId, userId, cellId, ct) is var result && result.IsT1)
+        if (await SanitizeAsync(gameId, userId, cellId, ct) is var result && result.IsT1)
         {
             return result;
         }
@@ -133,7 +133,12 @@ public class GameService : IGameService
         return game;
     }
 
-    private async Task<OneOf<Game, Error<string>>> Sanitize(
+    private async Task HitAsync(Game game, PlayerSide side, CancellationToken ct = default)
+    {
+        await Task.Delay(1000, ct);
+    }
+
+    private async Task<OneOf<Game, Error<string>>> SanitizeAsync(
         ObjectId gameId,
         ObjectId userId,
         int cellId,
@@ -177,17 +182,17 @@ public class GameService : IGameService
         return game;
     }
     
-    private static bool CheckWinner(Cell[] field, PlayerSide side)
+    private static bool CheckWinner(IReadOnlyList<Cell> field, PlayerSide side)
     {
       // Check rows
-      for (int i = 0; i < 3; i++)
+      for (var i = 0; i < 3; i++)
       {
           if (field[i * 3].Side == side && field[i * 3 + 1].Side == side && field[i * 3 + 2].Side == side)
               return true;
       }
 
       // Check columns
-      for (int i = 0; i < 3; i++)
+      for (var i = 0; i < 3; i++)
       {
           if (field[i].Side == side && field[i + 3].Side == side && field[i + 6].Side == side)
               return true;
@@ -197,9 +202,6 @@ public class GameService : IGameService
       if (field[0].Side == side && field[4].Side == side && field[8].Side == side)
           return true;
 
-      if (field[2].Side == side && field[4].Side == side && field[6].Side == side)
-          return true;
-
-      return false;      
+      return field[2].Side == side && field[4].Side == side && field[6].Side == side;
     }
 }
