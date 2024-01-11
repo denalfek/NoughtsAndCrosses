@@ -12,7 +12,7 @@ services:
         - ASPNETCORE_ENVIRONMENT=Docker
         - NOUGHTS_AND_CROSSES_API_Logging:LogLevel:Default=Information
         - NOUGHTS_AND_CROSSES_API_Logging:LogLevel:Microsoft.AspNetCore=Warning
-        - NOUGHTS_AND_CROSSES_API_MongoDb:User=NoughtsAndCrossesRoot
+        - NOUGHTS_AND_CROSSES_API_MongoDb:User=noughtsAndCrossesRoot
         - NOUGHTS_AND_CROSSES_API_MongoDb:Password=supersecret12)auth!
         - NOUGHTS_AND_CROSSES_API_MongoDb:Database=NoughtsAndCrosses
         - NOUGHTS_AND_CROSSES_API_MongoDb:Host=mongo-db
@@ -24,7 +24,7 @@ services:
     container_name: mongo-db
     image: mongo:latest
     environment:
-      MONGODB_INITDB_ROOT_USERNAME: NoughtsAndCrossesRoot
+      MONGODB_INITDB_ROOT_USERNAME: noughtsAndCrossesRoot
       MONGODB_INITDB_ROOT_PASSWORD: supersecret12)auth!
     ports:
       - "27017:27017"
