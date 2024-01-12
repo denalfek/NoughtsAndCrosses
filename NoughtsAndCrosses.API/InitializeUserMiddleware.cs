@@ -14,7 +14,7 @@ public class InitializeUserMiddleware
     private readonly CancellationToken _ct = new();
 
     private const string AnonymousPath = "/api/game";
-    private const string AnonymousMethod = "POST";
+    private readonly string[] _anonymousMethods = { "POST", "OPTIONS" };
     private const string UserIdCookieName = "userId";
 
     public InitializeUserMiddleware(
@@ -37,12 +37,15 @@ public class InitializeUserMiddleware
                 .FirstOrDefault(c => c.Key == UserIdCookieName)
                 .Value,
             out var userId);
-        if (context.Request.Path == AnonymousPath && context.Request.Method == AnonymousMethod)
+        _logger.LogInformation("User id: {UserId} sending the request to the api", userId);
+
+        if (context.Request.Path == AnonymousPath && _anonymousMethods.Any(m => m == context.Request.Method))
         {
             User user;
             if (correctId &&
                 await _collection.Find(x => x.Id == userId).FirstOrDefaultAsync(_ct) is { } existingUser)
             {
+                _logger.LogInformation("User id: {UserId} already exists", userId);                
                 user = existingUser;
             }
             else

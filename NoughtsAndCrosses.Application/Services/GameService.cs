@@ -46,6 +46,11 @@ public class GameService : IGameService
         }
 
         await _gameCollection.InsertOneAsync(game, cancellationToken: ct);
+        _logger.LogInformation(
+          "Gamer: {UserId}; side: {Side} initialized game {GameId}",
+          userId,
+          side,
+          game.Id);
         return game;
     }
 

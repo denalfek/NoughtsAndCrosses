@@ -16,32 +16,44 @@ builder.Services.AddSingleton<MongoConfigurationOptions>(
     {
         var configuration = provider.GetRequiredService<IConfiguration>();
         var config = configuration.GetSection("MongoDb").Get<MongoConfigurationOptions>();
-
-        if (config is null)
+        if (config is not null)
         {
-            Console.WriteLine("MongoDb configuration is null");
-            throw new Exception("MongoDb configuration is null");
+            return config;
         }
-
-        var connectionString = builder.Environment.IsProduction()
-            ? config.ConnectionStringProd
-            : config.ConnectionStringDev;
-
-        Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
-        Console.WriteLine($"MongoDb connection string: {connectionString}");
-        return config;
+        
+        Console.WriteLine("MongoDb configuration is null");
+        throw new Exception("MongoDb configuration is null");
     });
 builder.Services
     .AddSingleton<IMongoClient>(
-        provider => new MongoClient(builder.Environment.IsDevelopment()
-            ? provider.GetRequiredService<MongoConfigurationOptions>().ConnectionStringDev
-            : provider.GetRequiredService<MongoConfigurationOptions>().ConnectionStringProd));
+        provider =>
+        {
+            var connStr = builder.Environment.IsDevelopment()
+                ? provider.GetRequiredService<MongoConfigurationOptions>().ConnectionStringDev
+                : provider.GetRequiredService<MongoConfigurationOptions>().ConnectionStringProd;
+            
+            Console.WriteLine($"Environment is dev: {builder.Environment.IsDevelopment()}");
+            Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+            Console.WriteLine($"Connection string: {connStr}");
+            return new MongoClient(connStr);
+        });
 builder.Services.AddTransient<IBot, Bot>();
 builder.Services.AddScoped<IGameService, GameService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+const string corsPolicyName = "myCorsPolicy";
+builder.Services.AddCors(opts =>
+{
+    opts.AddPolicy(corsPolicyName, policyBuilder =>
+    {
+        policyBuilder
+            .WithOrigins("http://localhost:3001")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -60,7 +72,8 @@ app.MapPost(
         CancellationToken ct) =>
     {
         var result = await gameService.InitializeAsync(
-            ((User)ctx.User).Id,
+            //((User)ctx.User).Id,
+            ObjectId.Parse("65a01c32481b96493ddc6351"),
             request.Side,
             ct);
 
@@ -81,7 +94,7 @@ app.MapGet(
             return Results.BadRequest("Invalid game id");
         }
 
-        var result = await gameService.ResumeAsync(id, ((User)ctx.User).Id, ct);
+        var result = await gameService.ResumeAsync(id, ObjectId.Parse("65a01c32481b96493ddc6351"), ct);
         return result.IsT0
             ? Results.Ok(new GameResponse(result.AsT0.Id.ToString(), result.AsT0.Field))
             : Results.BadRequest(result.AsT1.Value);
@@ -94,21 +107,33 @@ app.MapPatch(
         HttpContext ctx,
         CancellationToken ct) =>
     {
+        Console.WriteLine("Hit request");
+        
         if (!ObjectId.TryParse(request.GameId, out var gameId))
         {
             return Results.BadRequest("Invalid game id");
         }
         
-        var gamer = (User)ctx.User;
+//        var gamer = (User)ctx.User;
         var result = await gameService.ProcessAsync(
             gameId,
-            gamer.Id,
+            ObjectId.Parse("65a01c32481b96493ddc6351"),
             request.CellId,
             ct);
 
-        return result.IsT0
-            ? Results.Ok(new GameResponse(result.AsT0.Id.ToString(), result.AsT0.Field))
-            : Results.BadRequest(result.AsT1.Value);
+        if (result.IsT1)
+        {
+            return Results.BadRequest(result.AsT1.Value);
+        }
+        
+        var game = result.AsT0;
+        if (game.WinnerId is { } winnerId)
+        {
+            return Results.Ok(new ProcessGameResponse(new GameResponse(game.Id.ToString(), game.Field), PlayerSide.Cross));
+        }
+
+        return Results.Ok(new ProcessGameResponse(new GameResponse(game.Id.ToString(), game.Field), null));
     });
-app.UseMiddleware<InitializeUserMiddleware>();
+//app.UseMiddleware<InitializeUserMiddleware>();
+app.UseCors(corsPolicyName);
 app.Run();

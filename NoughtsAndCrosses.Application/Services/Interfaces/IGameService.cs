@@ -9,9 +9,13 @@ using GameResponse = OneOf<Game, Error<string>>;
 
 public interface IGameService
 {
-    Task<GameResponse> InitializeAsync(ObjectId userId, PlayerSide side, CancellationToken ct = default);
+    Task<GameResponse> InitializeAsync(
+        ObjectId userId,
+        PlayerSide side, CancellationToken ct = default);
     
-    Task<GameResponse> ResumeAsync(ObjectId gameId, ObjectId userId, CancellationToken ct = default);
+    Task<GameResponse> ResumeAsync(ObjectId gameId,
+        ObjectId userId,
+        CancellationToken ct = default);
     
     Task<GameResponse> ProcessAsync(
         ObjectId gameId,
