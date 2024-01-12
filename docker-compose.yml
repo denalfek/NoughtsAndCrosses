@@ -1,25 +1,6 @@
 ﻿version: '3.8'
 
-services:
-  noughts-and-crosses-api:
-    build:
-      context: .
-      dockerfile: ./NoughtsAndCrosses.API/Dockerfile
-    container_name: noughts-and-crosses-api
-    ports:
-      - "5060:80"
-    environment:
-        - ASPNETCORE_ENVIRONMENT=Docker
-        - NOUGHTS_AND_CROSSES_API_Logging:LogLevel:Default=Information
-        - NOUGHTS_AND_CROSSES_API_Logging:LogLevel:Microsoft.AspNetCore=Warning
-        - NOUGHTS_AND_CROSSES_API_MongoDb:User=noughtsAndCrossesRoot
-        - NOUGHTS_AND_CROSSES_API_MongoDb:Password=supersecret12)auth!
-        - NOUGHTS_AND_CROSSES_API_MongoDb:Database=NoughtsAndCrosses
-        - NOUGHTS_AND_CROSSES_API_MongoDb:Host=mongo-db
-        - NOUGHTS_AND_CROSSES_API_MongoDb:Port=27017
-    networks:
-        - noughts-and-crosses-network
-    
+services:    
   mongo-db:
     container_name: mongo-db
     image: mongo:latest

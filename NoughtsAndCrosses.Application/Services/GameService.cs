@@ -15,16 +15,19 @@ public class GameService : IGameService
     private readonly ILogger<GameService> _logger;
     private readonly IMongoCollection<Game> _gameCollection;
     private readonly IBot _bot;
+    private readonly int _fieldSize = 9;
     
     public GameService(
         IBot bot,
         IMongoClient mongoClient,
         MongoConfigurationOptions mongoConfigurationOptions,
+        GameConfiguration gameConfiguration,
         ILogger<GameService> logger)
     {
         _bot = bot;
         var db = mongoClient.GetDatabase(mongoConfigurationOptions.Database);
         _gameCollection = db.GetCollection<Game>(nameof(Game));
+        _fieldSize = gameConfiguration.FieldSize;
         _logger = logger;
     }
 
@@ -37,7 +40,7 @@ public class GameService : IGameService
         {
             Id = userId,
             Side = side,
-        } });
+        } }, _fieldSize);
         
         if (side == PlayerSide.Nought)
         {
@@ -58,7 +61,7 @@ public class GameService : IGameService
     {
         if (await _gameCollection
                 .Find(x => x.Id == gameId)
-                .FirstOrDefaultAsync(ct) is not { WinnerId: null } game)
+                .FirstOrDefaultAsync(ct) is not { Winner: null } game)
         {
             return new Error<string>("Game not found or has finished already");
         }
@@ -105,7 +108,6 @@ public class GameService : IGameService
             return new Error<string>("Something went wrong");
         }
         
-        var botSide = user.Side == PlayerSide.Cross ? PlayerSide.Nought : PlayerSide.Cross;
         game.Field[cellId].Side = user.Side;
         await _gameCollection.UpdateOneAsync(
             x => x.Id == gameId,
@@ -113,15 +115,16 @@ public class GameService : IGameService
             cancellationToken: ct);
         if (game.Field.Count(x => x.Side == user.Side) >= 3 && CheckWinner(game.Field, user.Side))
         {
-            game.WinnerId = user.Id;
+            game.Winner = user;
             game.FinishTime = DateTime.UtcNow;
             await _gameCollection.UpdateOneAsync(
                 x => x.Id == gameId,
-                Builders<Game>.Update.Set(x => x.WinnerId, user.Id),
+                Builders<Game>.Update.Set(x => x.Winner, user),
                 cancellationToken: ct);
             return game;
         }
         
+        var botSide = user.Side == PlayerSide.Cross ? PlayerSide.Nought : PlayerSide.Cross;
         var botHit = await _bot.HitAsync(game.Field, botSide);
         game.Field[botHit.Id].Side = botSide;
         await _gameCollection.UpdateOneAsync(
@@ -135,16 +138,13 @@ public class GameService : IGameService
         }
         
         game.FinishTime = DateTime.UtcNow;
+        var bot = new Gamer { Id = ObjectId.Empty, Side = botSide };
+        game.Winner = bot;
         await _gameCollection.UpdateOneAsync(
             x => x.Id == gameId,
-            Builders<Game>.Update.Set(x => x.WinnerId, ObjectId.Empty),
+            Builders<Game>.Update.Set(x => x.Winner, bot),
             cancellationToken: ct);
         return game;
-    }
-
-    private async Task HitAsync(Game game, PlayerSide side, CancellationToken ct = default)
-    {
-        await Task.Delay(1000, ct); // test
     }
 
     private async Task<OneOf<Game, Error<string>>> SanitizeAsync(
@@ -155,7 +155,7 @@ public class GameService : IGameService
     {
         if (await _gameCollection
                 .Find(x => x.Id == gameId)
-                .FirstOrDefaultAsync(ct) is not { WinnerId: null } game)
+                .FirstOrDefaultAsync(ct) is not { Winner: null } game)
         {
             return new Error<string>("Game not found or has finished already");
         }

@@ -37,15 +37,14 @@ public class InitializeUserMiddleware
                 .FirstOrDefault(c => c.Key == UserIdCookieName)
                 .Value,
             out var userId);
-        _logger.LogInformation("User id: {UserId} sending the request to the api", userId);
-
+        
         if (context.Request.Path == AnonymousPath && _anonymousMethods.Any(m => m == context.Request.Method))
         {
             User user;
             if (correctId &&
                 await _collection.Find(x => x.Id == userId).FirstOrDefaultAsync(_ct) is { } existingUser)
             {
-                _logger.LogInformation("User id: {UserId} already exists", userId);                
+                _logger.LogInformation("User id: {UserId} send the request", userId);
                 user = existingUser;
             }
             else
@@ -59,6 +58,7 @@ public class InitializeUserMiddleware
                     {
                         HttpOnly = true,
                     });
+                _logger.LogInformation("New user id: {UserId} created", user.Id);
             }
 
             context.User = user;

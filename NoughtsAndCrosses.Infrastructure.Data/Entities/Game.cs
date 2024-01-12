@@ -5,14 +5,14 @@ namespace NoughtsAndCrosses.Infrastructure.Data.Entities;
 
 public class Game
 {
-    public Game(Gamer[] gamers)
+    public Game(Gamer[] gamers, int fieldSize)
     {
         Id = new ObjectId();
         StaTime = DateTime.UtcNow;
         Gamers = gamers;
-        Field = new Cell[9];
+        Field = new Cell[fieldSize];
 
-        for (var i = 0; i < 9; i++)
+        for (var i = 0; i < fieldSize; i++)
         {
             Field[i] = new Cell
             {
@@ -26,8 +26,7 @@ public class Game
     [BsonRepresentation(BsonType.ObjectId)]
     public ObjectId Id { get; set; }
     
-    [BsonRepresentation(BsonType.ObjectId)]
-    public ObjectId? WinnerId { get; set; }
+    public Gamer? Winner { get; set; }
     
     public Cell[] Field { get; set; }
     
